@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红树林百科</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+        body {
+            font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #071a12;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+            cursor: none;
+        }
+
+        /* ===== 自定义光标 ===== */
+        #cursor-dot {
+            position: fixed; top: 0; left: 0;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 30px rgba(130, 230, 180, 0.7), 0 0 60px rgba(130, 230, 180, 0.4);
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease, background 0.3s ease;
+        }
+        #cursor-ring {
+            position: fixed; top: 0; left: 0;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+        }
+        body.hover-interactive #cursor-dot { width: 18px; height: 18px; background: rgba(130, 230, 180, 1); }
+        body.hover-interactive #cursor-ring { width: 60px; height: 60px; border-color: rgba(130, 230, 180, 0.8); }
+        @media (hover: none) {
+            #cursor-dot, #cursor-ring { display: none; }
+            body { cursor: auto; }
+        }
+
+        #ripple-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 9997;
+            pointer-events: none;
+        }
+
+        .flash-effect {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: #fff;
+            z-index: 99999;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .flash-effect.fire { animation: flashFire 0.5s ease-out; }
+        @keyframes flashFire {
+            0%   { opacity: 0; }
+            12%  { opacity: 0.95; }
+            100% { opacity: 0; }
+        }
+
+        /* ==================== 第一屏 ==================== */
+        .baike-hero {
+            position: relative;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0 10%;
+        }
+
+        .baike-hero-bg {
+            position: absolute;
+            top: -2%; left: -2%;
+            width: 104%; height: 104%;
+            object-fit: cover;
+            object-position: center;
+            z-index: 0;
+            animation: baikeBreath 30s ease-in-out infinite alternate;
+        }
+        @keyframes baikeBreath {
+            0%   { transform: scale(1); filter: brightness(1); }
+            100% { transform: scale(1.05); filter: brightness(1.05); }
+        }
+
+        .baike-hero-mask {
+            position: absolute;
+            top: 0; left: 0;
+            width: 75%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(
+                ellipse 100% 80% at 0% 50%,
+                rgba(10, 32, 20, 0.8) 0%,
+                rgba(10, 32, 20, 0.55) 30%,
+                rgba(10, 32, 20, 0.15) 60%,
+                transparent 85%
+            );
+        }
+
+        .baike-hero-fade-bottom {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 18%;
+            z-index: 2;
+            pointer-events: none;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(7, 26, 18, 0.4) 50%,
+                rgba(7, 26, 18, 0.9) 90%,
+                #071a12 100%
+            );
+        }
+
+        .baike-hero-content {
+            position: relative;
+            z-index: 3;
+            max-width: 620px;
+        }
+
+        .baike-hero-tag {
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 0.8em;
+            color: #82e6b4;
+            margin-bottom: 30px;
+            padding-left: 0.8em;
+            text-shadow: 0 0 30px rgba(130, 230, 180, 0.5);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: baikeFadeUp 1.5s ease 0.3s forwards;
+        }
+
+        .baike-hero-title {
+            font-size: clamp(48px, 5.5vw, 84px);
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            line-height: 1.3;
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            transform: translateY(30px);
+            animation: baikeFadeUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+        }
+        .baike-hero-title .highlight {
+            color: #82e6b4;
+            font-weight: 400;
+        }
+
+        .baike-hero-desc {
+            font-size: clamp(14px, 1.15vw, 16px);
+            font-weight: 300;
+            line-height: 2.2;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: baikeFadeUp 1.5s ease 1.2s forwards;
+        }
+
+        @keyframes baikeFadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .viewfinder {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            animation: viewfinderIn 1.8s ease 1.6s forwards;
+        }
+        @keyframes viewfinderIn {
+            to { opacity: 1; }
+        }
+
+        .vf-corner {
+            position: absolute;
+            width: 60px; height: 60px;
+            border-color: rgba(255, 255, 255, 0.75);
+            border-style: solid;
+            border-width: 0;
+            filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6));
+        }
+        .vf-tl { top: 6%; left: 5%; border-top-width: 1.5px; border-left-width: 1.5px; border-top-left-radius: 4px; }
+        .vf-tr { top: 6%; right: 5%; border-top-width: 1.5px; border-right-width: 1.5px; border-top-right-radius: 4px; }
+        .vf-bl { bottom: 6%; left: 5%; border-bottom-width: 1.5px; border-left-width: 1.5px; border-bottom-left-radius: 4px; }
+        .vf-br { bottom: 6%; right: 5%; border-bottom-width: 1.5px; border-right-width: 1.5px; border-bottom-right-radius: 4px; }
+
+        .vf-grid-line {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.12);
+            filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
+        }
+        .vf-line-h1 { top: 33.33%; left: 5%; right: 5%; height: 1px; }
+        .vf-line-h2 { top: 66.66%; left: 5%; right: 5%; height: 1px; }
+        .vf-line-v1 { left: 33.33%; top: 6%; bottom: 6%; width: 1px; }
+        .vf-line-v2 { left: 66.66%; top: 6%; bottom: 6%; width: 1px; }
+
+        .vf-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90px; height: 90px;
+            border: 1px solid rgba(130, 230, 180, 0.85);
+            border-radius: 4px;
+            box-shadow: 0 0 12px rgba(130, 230, 180, 0.3);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .vf-center::before,
+        .vf-center::after {
+            content: '';
+            position: absolute;
+            background: rgba(130, 230, 180, 0.85);
+        }
+        .vf-center::before { top: 50%; left: -12px; width: 8px; height: 1px; transform: translateY(-50%); }
+        .vf-center::after { top: 50%; right: -12px; width: 8px; height: 1px; transform: translateY(-50%); }
+
+        .vf-info {
+            position: absolute;
+            left: 5%; right: 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+            font-weight: 400;
+        }
+        .vf-info-top { top: 3%; }
+        .vf-info-bottom { bottom: 3%; }
+
+        .vf-info .dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #ff4d4d;
+            margin-right: 8px;
+            box-shadow: 0 0 8px rgba(255, 77, 77, 0.8);
+            animation: recBlink 2s ease-in-out infinite;
+        }
+        @keyframes recBlink {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.3; }
+        }
+
+        .shutter-btn {
+            position: absolute;
+            bottom: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 8;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            cursor: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.15), inset 0 0 20px rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            animation: baikeFadeUp 1.5s ease 2s forwards;
+        }
+        .shutter-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        .shutter-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+        }
+        .shutter-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: #82e6b4;
+            box-shadow: 0 0 60px rgba(130, 230, 180, 0.5), inset 0 0 30px rgba(130, 230, 180, 0.15);
+        }
+        .shutter-btn:hover::before { border-color: #82e6b4; }
+        .shutter-btn:hover::after { background: #82e6b4; }
+        .shutter-btn:active { transform: translateX(-50%) scale(0.9); }
+        .shutter-btn.clicking::before { width: 22px; height: 22px; border-color: #82e6b4; }
+        .shutter-btn.clicking::after { width: 8px; height: 8px; background: #82e6b4; }
+
+        .baike-hero.capturing .viewfinder {
+            animation: viewfinderFlash 0.5s ease-out;
+        }
+        @keyframes viewfinderFlash {
+            0%   { opacity: 1; filter: brightness(1); }
+            20%  { opacity: 1; filter: brightness(2.5); }
+            100% { opacity: 1; filter: brightness(1); }
+        }
+        .baike-hero.capturing .vf-center {
+            transform: translate(-50%, -50%) scale(0.7);
+            border-color: #ffffff;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+        }
+
+        .shutter-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 6;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 0.5em;
+            color: rgba(255, 255, 255, 0.7);
+            padding-left: 0.5em;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+            opacity: 0;
+            animation: baikeFadeUp 1.5s ease 2.4s forwards;
+            transition: opacity 0.4s ease;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 35px; left: 40px;
+            z-index: 100;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 28px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            color: #ffffff;
+            font-size: 13px;
+            letter-spacing: 0.2em;
+            text-decoration: none;
+            transition: all 0.5s ease;
+            font-family: inherit;
+            opacity: 0;
+            animation: baikeFadeUp 1.5s ease 0.8s forwards;
+        }
+        .back-btn:hover {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: #82e6b4;
+            box-shadow: 0 0 30px rgba(130, 230, 180, 0.4);
+        }
+        .back-btn svg {
+            width: 16px; height: 16px;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* ==================== 第二屏 ==================== */
+        .baike-story-scroll {
+            position: relative;
+            height: 100vh;
+            overflow: hidden;
+            background: #071a12;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8%;
+        }
+
+        .baike-story-scroll::before {
+            content: '';
+            position: absolute;
+            top: -20%; right: -10%;
+            width: 60%; height: 80%;
+            background: radial-gradient(circle, rgba(130, 230, 180, 0.08) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .story-inner {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 5%;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .story-image-wrap {
+            flex: 1;
+            min-width: 0;
+            transform: translateY(-120%);
+            transition: transform 0.1s linear;
+            will-change: transform;
+        }
+
+        .story-image-frame {
+            position: relative;
+            width: 100%;
+            height: 62vh;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(130, 230, 180, 0.15);
+            background: linear-gradient(135deg, rgba(10, 26, 18, 0.9) 0%, rgba(6, 18, 12, 0.95) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .story-image-frame img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+        .story-image-frame img.leaving {
+            opacity: 0;
+            transform: scale(0.96);
+        }
+
+        .story-image-frame::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(
+                circle 320px at var(--mx, 50%) var(--my, 50%),
+                rgba(255, 255, 255, 0.08) 0%,
+                transparent 60%
+            );
+            pointer-events: none;
+            transition: background 0.15s ease-out;
+        }
+
+        .story-album-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding: 0 4px;
+        }
+
+        .story-page-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .story-page-indicator .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .story-page-indicator .dot.active {
+            width: 22px;
+            border-radius: 4px;
+            background: #82e6b4;
+            box-shadow: 0 0 12px rgba(130, 230, 180, 0.6);
+        }
+        .story-page-indicator .count {
+            font-size: 12px;
+            letter-spacing: 0.2em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-left: 8px;
+        }
+
+        .story-nav-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .story-nav-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 11px 20px;
+            background: rgba(130, 230, 180, 0.1);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(130, 230, 180, 0.4);
+            border-radius: 40px;
+            color: #ffffff;
+            font-size: 12px;
+            letter-spacing: 0.15em;
+            cursor: none;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .story-nav-btn:hover {
+            background: rgba(130, 230, 180, 0.25);
+            border-color: #82e6b4;
+            box-shadow: 0 0 30px rgba(130, 230, 180, 0.4);
+        }
+        .story-nav-btn:active { transform: scale(0.96); }
+        .story-nav-btn svg {
+            width: 14px; height: 14px;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .story-text {
+            flex: 1;
+            min-width: 0;
+            color: #fff;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: transform 0.1s linear, opacity 0.4s ease;
+            will-change: transform, opacity;
+        }
+        .story-text .tag {
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0.8em;
+            color: #82e6b4;
+            margin-bottom: 30px;
+            padding-left: 0.8em;
+            text-shadow: 0 0 30px rgba(130, 230, 180, 0.5);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .story-text h2 {
+            font-size: clamp(28px, 2.8vw, 42px);
+            font-weight: 300;
+            letter-spacing: 0.12em;
+            line-height: 1.5;
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .story-text h2 .highlight {
+            color: #82e6b4;
+            font-weight: 400;
+        }
+        .story-text p {
+            font-size: clamp(13px, 1.05vw, 15px);
+            font-weight: 300;
+            line-height: 2.1;
+            letter-spacing: 0.12em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 18px;
+            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .story-text p:last-child { margin-bottom: 0; }
+        .story-text p .green {
+            color: #82e6b4;
+            font-weight: 400;
+        }
+
+        .story-text.fading .tag,
+        .story-text.fading h2,
+        .story-text.fading p {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @media (max-width: 900px) {
+            .story-inner {
+                flex-direction: column;
+                gap: 30px;
+                max-width: 100%;
+            }
+            .story-image-frame { height: 40vh; }
+            .baike-hero { padding: 0 8%; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+<canvas id="ripple-canvas"></canvas>
+<div class="flash-effect" id="flash-effect"></div>
+
+<!-- ==================== 第一屏 ==================== -->
+<section class="baike-hero" id="baike-hero">
+    <img class="baike-hero-bg" src="bg5.jpg" alt="红树林">
+    <div class="baike-hero-mask"></div>
+    <div class="baike-hero-fade-bottom"></div>
+
+    <div class="viewfinder" id="viewfinder">
+        <div class="vf-corner vf-tl"></div>
+        <div class="vf-corner vf-tr"></div>
+        <div class="vf-corner vf-bl"></div>
+        <div class="vf-corner vf-br"></div>
+
+        <div class="vf-grid-line vf-line-h1"></div>
+        <div class="vf-grid-line vf-line-h2"></div>
+        <div class="vf-grid-line vf-line-v1"></div>
+        <div class="vf-grid-line vf-line-v2"></div>
+
+        <div class="vf-center" id="vf-center"></div>
+
+        <div class="vf-info vf-info-top">
+            <span><span class="dot"></span>REC</span>
+            <span>4K · 24FPS</span>
+            <span>ISO 200</span>
+        </div>
+
+        <div class="vf-info vf-info-bottom">
+            <span>F/2.8</span>
+            <span>1/250</span>
+            <span>RAW</span>
+        </div>
+    </div>
+
+    <a href="index2.html" class="back-btn">
+        <svg viewBox="0 0 24 24">
+            <path d="M19 12H5M11 18l-6-6 6-6" />
+        </svg>
+        返回
+    </a>
+
+    <div class="baike-hero-content">
+        <div class="baike-hero-tag">红 树 林 百 科</div>
+        <h1 class="baike-hero-title">
+            按下快门<br>开始<span class="highlight">探索</span>
+        </h1>
+        <p class="baike-hero-desc">
+            每一棵红树，都是一张等待被发现的照片。按下快门，让我们从这片海上森林开始，认识它、了解它、守护它。
+        </p>
+    </div>
+
+    <button class="shutter-btn" id="shutter-btn" aria-label="按下快门"></button>
+    <div class="shutter-hint" id="shutter-hint">按 下 快 门</div>
+</section>
+
+<!-- ==================== 第二屏 ==================== -->
+<section class="baike-story-scroll" id="baike-story">
+    <div class="story-inner">
+        <div class="story-image-wrap" id="story-image-wrap">
+            <div class="story-image-frame" id="story-image-frame">
+                <img id="story-image" src="bg6.jpg" alt="红树林" onerror="this.src='bg5.jpg'">
+            </div>
+
+            <div class="story-album-bar">
+                <div class="story-page-indicator">
+                    <span class="dot active" data-index="0"></span>
+                    <span class="dot" data-index="1"></span>
+                    <span class="dot" data-index="2"></span>
+                    <span class="count"><span id="page-current">1</span> / 3</span>
+                </div>
+                <div class="story-nav-group">
+                    <button class="story-nav-btn" id="story-prev-btn">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 12H5M11 18l-6-6 6-6" />
+                        </svg>
+                        上一张
+                    </button>
+                    <button class="story-nav-btn" id="story-next-btn">
+                        下一张
+                        <svg viewBox="0 0 24 24">
+                            <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="story-text" id="story-text">
+            <div class="tag" id="story-tag">红 树 林 的 根</div>
+            <h2 id="story-title">为什么它要<br><span class="highlight">长出这么奇怪的根</span>？</h2>
+            <div id="story-paragraphs">
+                <p>
+                    红树林生活在潮间带，每天都被咸水反复淹没。普通的树根无法在缺氧、高盐的淤泥里呼吸。
+                </p>
+                <p>
+                    所以红树林进化出了<span class="green">支柱根</span>和<span class="green">呼吸根</span>——它们从树干伸出，像拱门一样撑在泥上，把一部分根露出水面，直接呼吸空气。
+                </p>
+                <p>
+                    这些根不仅能让红树林活下来，还能<span class="green">削弱海浪、固定泥沙</span>。一道成熟的根系，就是一道天然的防波堤。
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // ==================== 页面加载时强制滚动到顶部（关键修复） ====================
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+    window.addEventListener('load', () => {
+        window.scrollTo(0, 0);
+    });
+
+    // ==================== 自定义光标 ====================
+    const cursorDot = document.getElementById('cursor-dot');
+    const cursorRing = document.getElementById('cursor-ring');
+    let mouseX = 0, mouseY = 0;
+    let dotX = 0, dotY = 0;
+    let ringX = 0, ringY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+    });
+
+    function animateCursor() {
+        dotX += (mouseX - dotX) * 0.5;
+        dotY += (mouseY - dotY) * 0.5;
+        cursorDot.style.left = dotX + 'px';
+        cursorDot.style.top = dotY + 'px';
+
+        ringX += (mouseX - ringX) * 0.15;
+        ringY += (mouseY - ringY) * 0.15;
+        cursorRing.style.left = ringX + 'px';
+        cursorRing.style.top = ringY + 'px';
+
+        requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+
+    const interactiveElements = document.querySelectorAll('.back-btn, .shutter-btn, .story-image-wrap, .story-nav-btn');
+    interactiveElements.forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('hover-interactive'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('hover-interactive'));
+    });
+
+    // ==================== 水波纹 ====================
+    const canvas = document.getElementById('ripple-canvas');
+    const ctx = canvas.getContext('2d');
+    let ripples = [];
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    let lastRippleTime = 0;
+    document.addEventListener('mousemove', (e) => {
+        const heroRect = document.getElementById('baike-hero').getBoundingClientRect();
+        const storyRect = document.getElementById('baike-story').getBoundingClientRect();
+
+        const inHero = heroRect.top <= 0 && heroRect.bottom >= 0;
+        const inStory = storyRect.top <= 0 && storyRect.bottom >= 0;
+
+        let allowRipple = false;
+
+        if (inHero && !inStory) {
+            const bottomThird = window.innerHeight * (2 / 3);
+            if (e.clientY >= bottomThird) allowRipple = true;
+        } else if (inStory) {
+            allowRipple = true;
+        }
+
+        if (!allowRipple) return;
+
+        const now = Date.now();
+        if (now - lastRippleTime < 45) return;
+        lastRippleTime = now;
+
+        ripples.push({
+            x: e.clientX,
+            y: e.clientY,
+            radius: 0,
+            maxRadius: 70 + Math.random() * 50,
+            alpha: 0.65,
+            speed: 1.3 + Math.random() * 0.5,
+            rings: 4
+        });
+    });
+
+    function drawRipples() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = ripples.length - 1; i >= 0; i--) {
+            const r = ripples[i];
+            r.radius += r.speed;
+            r.alpha *= 0.972;
+
+            if (r.alpha < 0.01 || r.radius > r.maxRadius) {
+                ripples.splice(i, 1);
+                continue;
+            }
+
+            for (let j = 0; j < r.rings; j++) {
+                const ringRadius = r.radius - j * 7;
+                if (ringRadius < 0) continue;
+                const ringAlpha = r.alpha * (1 - j * 0.22);
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, ringRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(130, 230, 180, ${ringAlpha})`;
+                ctx.lineWidth = 1.4 - j * 0.25;
+                ctx.stroke();
+            }
+
+            if (r.radius < 25) {
+                ctx.beginPath();
+                ctx.arc(r.x, r.y, r.radius * 0.4, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${r.alpha * 0.25})`;
+                ctx.fill();
+            }
+        }
+
+        requestAnimationFrame(drawRipples);
+    }
+    drawRipples();
+
+    // ==================== 快门音效 ====================
+    function playShutterSound() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            const ctx2 = new AudioCtx();
+
+            const osc1 = ctx2.createOscillator();
+            const gain1 = ctx2.createGain();
+            osc1.type = 'square';
+            osc1.frequency.setValueAtTime(2200, ctx2.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(800, ctx2.currentTime + 0.03);
+            gain1.gain.setValueAtTime(0.15, ctx2.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + 0.05);
+            osc1.connect(gain1);
+            gain1.connect(ctx2.destination);
+            osc1.start(ctx2.currentTime);
+            osc1.stop(ctx2.currentTime + 0.06);
+
+            const osc2 = ctx2.createOscillator();
+            const gain2 = ctx2.createGain();
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(1500, ctx2.currentTime + 0.06);
+            osc2.frequency.exponentialRampToValueAtTime(500, ctx2.currentTime + 0.09);
+            gain2.gain.setValueAtTime(0.12, ctx2.currentTime + 0.06);
+            gain2.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + 0.11);
+            osc2.connect(gain2);
+            gain2.connect(ctx2.destination);
+            osc2.start(ctx2.currentTime + 0.06);
+            osc2.stop(ctx2.currentTime + 0.12);
+
+            setTimeout(() => ctx2.close(), 500);
+        } catch (e) {
+            console.log('音效播放失败:', e);
+        }
+    }
+
+    // ==================== 平滑滚动 ====================
+    function smoothScrollTo(targetY, duration) {
+        const startY = window.scrollY;
+        const distance = targetY - startY;
+        const startTime = performance.now();
+
+        function step(now) {
+            const elapsed = now - startTime;
+            const t = Math.min(elapsed / duration, 1);
+            const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            window.scrollTo(0, startY + distance * eased);
+            if (t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    // ==================== 快门点击 ====================
+    const shutterBtn = document.getElementById('shutter-btn');
+    const shutterHint = document.getElementById('shutter-hint');
+    const flashEffect = document.getElementById('flash-effect');
+    const storyScroll = document.getElementById('baike-story');
+    const baikeHero = document.getElementById('baike-hero');
+    let isShooting = false;
+
+    shutterBtn.addEventListener('click', () => {
+        if (isShooting) return;
+        isShooting = true;
+
+        shutterBtn.classList.add('clicking');
+        baikeHero.classList.add('capturing');
+        setTimeout(() => baikeHero.classList.remove('capturing'), 500);
+
+        flashEffect.classList.add('fire');
+        setTimeout(() => flashEffect.classList.remove('fire'), 600);
+
+        playShutterSound();
+        if (shutterHint) shutterHint.style.opacity = '0';
+
+        const targetY = storyScroll.offsetTop;
+        smoothScrollTo(targetY, 1200);
+
+        setTimeout(() => {
+            shutterBtn.classList.remove('clicking');
+            isShooting = false;
+        }, 1300);
+    });
+
+    // ==================== 第二屏滚动驱动 ====================
+    const imageWrap = document.getElementById('story-image-wrap');
+    const storyText = document.getElementById('story-text');
+
+    function updateStoryScroll() {
+        const rect = storyScroll.getBoundingClientRect();
+        const vh = window.innerHeight;
+        const progress = Math.min(Math.max((vh - rect.top) / vh, 0), 1);
+
+        const imgY = (1 - progress) * -120;
+        imageWrap.style.transform = `translateY(${imgY}%)`;
+
+        const textX = (1 - progress) * 100;
+        storyText.style.transform = `translateX(${textX}%)`;
+        storyText.style.opacity = Math.min(progress / 0.6, 1);
+    }
+
+    window.addEventListener('scroll', updateStoryScroll, { passive: true });
+    window.addEventListener('resize', updateStoryScroll);
+    updateStoryScroll();
+
+    // ==================== 图片内部视差跟随 ====================
+    const imageFrame = document.getElementById('story-image-frame');
+    const storyImage = document.getElementById('story-image');
+
+    imageFrame.addEventListener('mousemove', (e) => {
+        const rect = imageFrame.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+
+        const x = (e.clientX - cx) / (rect.width / 2);
+        const y = (e.clientY - cy) / (rect.height / 2);
+
+        const shiftX = x * 8;
+        const shiftY = y * 8;
+
+        storyImage.style.transform = `translate(${shiftX}px, ${shiftY}px)`;
+
+        const mx = ((e.clientX - rect.left) / rect.width) * 100;
+        const my = ((e.clientY - rect.top) / rect.height) * 100;
+        imageFrame.style.setProperty('--mx', mx + '%');
+        imageFrame.style.setProperty('--my', my + '%');
+    });
+
+    imageFrame.addEventListener('mouseleave', () => {
+        storyImage.style.transform = 'translate(0, 0)';
+    });
+
+    // ==================== 相册数据 ====================
+    const albumData = [
+        {
+            image: 'bg6.jpg',
+            tag: '红 树 林 的 根',
+            title: '为什么它要<br><span class="highlight">长出这么奇怪的根</span>？',
+            paragraphs: [
+                '红树林生活在潮间带，每天都被咸水反复淹没。普通的树根无法在缺氧、高盐的淤泥里呼吸。',
+                '所以红树林进化出了<span class="green">支柱根</span>和<span class="green">呼吸根</span>——它们从树干伸出，像拱门一样撑在泥上，把一部分根露出水面，直接呼吸空气。',
+                '这些根不仅能让红树林活下来，还能<span class="green">削弱海浪、固定泥沙</span>。一道成熟的根系，就是一道天然的防波堤。'
+            ]
+        },
+        {
+            image: 'bg7.jpg',
+            tag: '红 树 林 之 谜',
+            title: '为什么叫<span class="highlight">红树林</span><br>它却<span class="highlight">不是红色</span>？',
+            paragraphs: [
+                '这是一个被问了无数次的问题。红树林的叶子常年翠绿，树冠郁郁葱葱，从外表上看，它和任何一座普通树林都没有区别。',
+                '秘密藏在<span class="green">树皮里</span>。红树植物的树皮富含一种叫<span class="green">单宁酸</span>的物质。当树皮被海水浸泡、或被划破，单宁酸接触空气后就会<span class="green">氧化成红褐色</span>。',
+                '早期的渔民和伐木者，看到砍开的树干里流出红褐色的汁液，便把它叫做“红树”。名字就这样传了下来——<span class="green">不是因为树叶红，而是因为树的心，是红的。</span>'
+            ]
+        },
+        {
+            image: 'bg8.jpg',
+            tag: '支 柱 根 的 秘 密',
+            title: '为什么它的根<br><span class="highlight">像一张网</span>？',
+            paragraphs: [
+                '红树林扎根在松软的淤泥里，普通树木的根根本抓不住。于是它长出了<span class="green">支柱根</span>——从树干伸出，像拱门一样撑在泥上。',
+                '这些根不只用来站稳，还是<span class="green">呼吸器官</span>。退潮时它们露出水面，直接呼吸空气；涨潮时它们被海水淹没，还能继续工作。',
+                '千百条支柱根缠在一起，就是一道<span class="green">天然防波堤</span>。它削弱海浪、固定泥沙，把海岸线牢牢守住。'
+            ]
+        }
+    ];
+
+    let currentAlbumIndex = 0;
+    let isSwitching = false;
+
+    const storyNextBtn = document.getElementById('story-next-btn');
+    const storyPrevBtn = document.getElementById('story-prev-btn');
+    const storyTag = document.getElementById('story-tag');
+    const storyTitle = document.getElementById('story-title');
+    const storyParagraphs = document.getElementById('story-paragraphs');
+    const pageCurrent = document.getElementById('page-current');
+    const pageDots = document.querySelectorAll('.story-page-indicator .dot');
+
+    function switchAlbum(index) {
+        if (index === currentAlbumIndex || isSwitching) return;
+        isSwitching = true;
+
+        storyImage.classList.add('leaving');
+        storyText.classList.add('fading');
+
+        setTimeout(() => {
+            const data = albumData[index];
+
+            storyImage.src = data.image;
+            storyTag.textContent = data.tag;
+            storyTitle.innerHTML = data.title;
+            storyParagraphs.innerHTML = data.paragraphs.map(p => `<p>${p}</p>`).join('');
+
+            pageCurrent.textContent = (index + 1);
+            pageDots.forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+
+            currentAlbumIndex = index;
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    storyImage.classList.remove('leaving');
+                    storyText.classList.remove('fading');
+                    setTimeout(() => { isSwitching = false; }, 600);
+                });
+            });
+        }, 500);
+    }
+
+    storyNextBtn.addEventListener('click', () => {
+        const nextIndex = (currentAlbumIndex + 1) % albumData.length;
+        switchAlbum(nextIndex);
+    });
+
+    storyPrevBtn.addEventListener('click', () => {
+        const prevIndex = (currentAlbumIndex - 1 + albumData.length) % albumData.length;
+        switchAlbum(prevIndex);
+    });
+
+    // ==================== 移动端禁用光标 ====================
+    if ('ontouchstart' in window) {
+        cursorDot.style.display = 'none';
+        cursorRing.style.display = 'none';
+        document.body.style.cursor = 'auto';
+    }
+</script>
+</body>
+</html>
