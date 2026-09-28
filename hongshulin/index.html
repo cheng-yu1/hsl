@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红树林守护者 · 序章</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #020604; }
+
+        /* 4张背景图（呼吸感推镜） */
+        .bg-slide {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; object-position: center; z-index: 0;
+            opacity: 0; transition: opacity 2.5s ease-in-out;
+            animation: kenBurns 20s ease-out infinite alternate;
+        }
+        .bg-slide.active { opacity: 1; z-index: 1; }
+        @keyframes kenBurns {
+            0%   { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.05) translate(-1%, -1%); }
+        }
+
+        /* 双层电影级遮罩 */
+        #light-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.3) 0%,
+                rgba(0, 0, 0, 0.05) 20%,
+                rgba(0, 0, 0, 0.05) 80%,
+                rgba(0, 0, 0, 0.35) 100%
+            );
+            pointer-events: none;
+        }
+        #text-shadow-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 3;
+            background: radial-gradient(
+                ellipse at center,
+                rgba(8, 26, 18, 0.6) 0%,
+                rgba(8, 26, 18, 0.15) 50%,
+                rgba(0, 0, 0, 0) 80%
+            );
+            pointer-events: none;
+        }
+
+        /* ===== 旁白（高级灰阴影） ===== */
+        #cinema-text {
+            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; max-width: 1100px; text-align: center; z-index: 20; padding: 0 20px;
+        }
+        .line {
+            position: absolute; top: 0; left: 0; width: 100%;
+            font-size: 28px; 
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            line-height: 1.8;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), 0 0 20px rgba(0, 0, 0, 0.2);
+            opacity: 0; 
+            transform: translateY(15px);
+            transition: opacity 2s ease, transform 2s ease;
+        }
+        .line.active { opacity: 1; transform: translateY(0); }
+
+        /* ===== 结尾标题与按钮 ===== */
+        #outro-box {
+            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; text-align: center; z-index: 30;
+            opacity: 0; visibility: hidden; transition: opacity 2s ease, visibility 2s;
+        }
+        #outro-box.show { opacity: 1; visibility: visible; }
+
+        .main-title {
+            font-size: 68px; font-weight: 900; letter-spacing: 0.2em; 
+            color: #fff; 
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 255, 255, 0.15);
+            position: relative; display: inline-block;
+        }
+        .main-title::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            animation: shine 3s ease-in-out infinite;
+        }
+        @keyframes shine { 0% { left: -100%; } 100% { left: 160%; } }
+        
+        .subtitle {
+            font-size: 16px; color: #fff; letter-spacing: 0.5em; margin-top: 30px;
+            font-weight: 300; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-cine {
+            margin-top: 60px; padding: 18px 70px;
+            background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            color: #fff; border: 1.5px solid rgba(255,255,255,0.9); border-radius: 50px;
+            font-size: 18px; letter-spacing: 0.4em; cursor: pointer; position: relative; overflow: hidden;
+            transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            font-family: inherit;
+        }
+        .btn-cine:hover { background: rgba(255,255,255,0.25); box-shadow: 0 15px 60px rgba(255,255,255,0.3); transform: translateY(-3px); }
+        .btn-cine:active { transform: scale(0.96); }
+
+        .tech-hint {
+            position: absolute; bottom: 5%; width: 100%; text-align: center;
+            font-size: 12px; color: rgba(255,255,255,0.5); letter-spacing: 0.2em; z-index: 10;
+            opacity: 0; transition: opacity 2s ease; text-shadow: 0 1px 5px rgba(0,0,0,0.5);
+        }
+        .tech-hint.show { opacity: 1; }
+
+        /* 声音开关按钮 */
+        #sound-toggle {
+            position: absolute; bottom: 5%; right: 5%; z-index: 100;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: rgba(0,0,0,0.3); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5); color: white;
+            font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.5s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #sound-toggle:hover { background: rgba(0,0,0,0.5); transform: scale(1.1); }
+
+        /* 跳过按钮（不起眼角落） */
+        #skip-btn {
+            position: absolute; top: 5%; right: 5%; z-index: 100;
+            padding: 8px 18px; border-radius: 20px;
+            background: rgba(0,0,0,0.2); backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.7);
+            font-size: 13px; cursor: pointer; letter-spacing: 0.1em;
+            transition: all 0.5s ease;
+            font-family: inherit;
+        }
+        #skip-btn:hover { background: rgba(0,0,0,0.5); color: #fff; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- 4张本地图片 -->
+    <img class="bg-slide active" src="bg1.jpg" alt="图1">
+    <img class="bg-slide" src="bg2.jpg" alt="图2">
+    <img class="bg-slide" src="bg3.jpg" alt="图3">
+    <img class="bg-slide" src="bg4.jpg" alt="图4">
+
+    <div id="light-overlay"></div>
+    <div id="text-shadow-overlay"></div>
+
+    <!-- 3句台词 -->
+    <div id="cinema-text">
+        <div class="line active">在中国的南方，有一片长在海上的森林。</div>
+        <div class="line">它有自己的呼吸和潮汐，是无数生命的故乡。</div>
+        <div class="line">今天，让我们用AI的眼睛，重新认识这座红树林之城。</div>
+    </div>
+
+    <!-- 片尾标题与按钮 -->
+    <div id="outro-box">
+        <div class="main-title">红树林守护者</div>
+        <div class="subtitle">AI 生态科普互动应用</div>
+        <button class="btn-cine" onclick="enterApp()">开 启 探 索</button>
+    </div>
+
+    <div class="tech-hint">AIGC 轻量化应用开发 · 前端交互 · 个人独立作品</div>
+
+    <!-- 跳过按钮 -->
+    <button id="skip-btn" onclick="skipAnimation()">跳过片头 &gt;&gt;</button>
+
+    <!-- 声音开关 -->
+    <button id="sound-toggle" onclick="toggleSound(event)">🔇</button>
+    
+    <!-- 音乐源：恢复为原版的在线音乐，并开启 autoplay -->
+    <audio id="bgm" autoplay loop>
+        <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=calm-nature-113679.mp3" type="audio/mpeg">
+    </audio>
+</div>
+
+<script>
+    const bgSlides = document.querySelectorAll('.bg-slide');
+    const lines = document.querySelectorAll('.line');
+    const outroBox = document.getElementById('outro-box');
+    const techHint = document.querySelector('.tech-hint');
+    const bgm = document.getElementById('bgm');
+    const soundBtn = document.getElementById('sound-toggle');
+    const skipBtn = document.getElementById('skip-btn');
+    
+    let currentIndex = 0;
+    const totalScenes = 3;
+    const duration = 5500; 
+
+    // 存储定时器，用于跳过时清除
+    let timers = [];
+
+    // ==================== 音乐逻辑（核心修复） ====================
+    
+    // 1. 监听音频原生状态，同步更新按钮图标
+    // 这样只要音乐状态变了，图标一定会跟着变，绝不脱节！
+    bgm.addEventListener('play', () => {
+        soundBtn.innerText = '🔊';
+    });
+    bgm.addEventListener('pause', () => {
+        soundBtn.innerText = '🔇';
+    });
+
+    // 2. 尝试自动播放（一旦页面加载完成就触发）
+    function tryAutoPlay() {
+        if (bgm.paused) {
+            bgm.play().catch(() => {
+                // 如果被浏览器拦截，控制台会报错，但我们会等待用户交互
+                console.log('浏览器拦截了自动播放，等待用户交互...');
+            });
+        }
+    }
+    window.addEventListener('load', tryAutoPlay);
+
+    // 3. 监听页面的第一次任意点击（比如滑动、点击跳过），强制启动音乐
+    document.addEventListener('click', function() {
+        if (bgm.paused) {
+            bgm.play().catch(()=>{});
+        }
+    }, { once: true }); // 只触发一次，防止后续点击干扰开关
+
+    // 4. 点击开关按钮
+    function toggleSound(event) {
+        // 阻止事件冒泡，防止触发上面的全局点击
+        event.stopPropagation();
+        
+        if (bgm.paused) {
+            // 当前是暂停状态，尝试播放
+            bgm.play().catch((err) => {
+                console.log('播放失败', err);
+                alert('音乐正在加载中，请稍候再试。如果多次失败，请检查网络。');
+            });
+        } else {
+            // 当前是播放状态，直接暂停
+            bgm.pause();
+        }
+    }
+
+    // ==================== 跳过功能 ====================
+    function skipAnimation() {
+        // 1. 清除所有定时器，让动画停止推进
+        timers.forEach(t => clearTimeout(t));
+        timers = [];
+        
+        // 2. 直接切到最后一张图（图4）
+        bgSlides.forEach(b => b.classList.remove('active'));
+        bgSlides[3].classList.add('active');
+        
+        // 3. 隐藏所有台词
+        lines.forEach(line => line.classList.remove('active'));
+        
+        // 4. 立刻显示标题和按钮
+        outroBox.classList.add('show');
+        techHint.classList.add('show');
+        
+        // 5. 隐藏跳过按钮自己
+        skipBtn.style.display = 'none';
+    }
+
+    // ==================== 开场动画时间轴 ====================
+    function playNextScene() {
+        bgSlides[currentIndex].classList.remove('active');
+        lines[currentIndex].classList.remove('active');
+        currentIndex++;
+
+        if (currentIndex < totalScenes) {
+            bgSlides[currentIndex].classList.add('active');
+            lines[currentIndex].classList.add('active');
+            timers.push(setTimeout(playNextScene, duration));
+        } else {
+            bgSlides[3].classList.add('active');
+            lines.forEach(line => line.classList.remove('active'));
+            timers.push(setTimeout(() => {
+                outroBox.classList.add('show');
+                techHint.classList.add('show');
+                skipBtn.style.display = 'none'; // 动画播完，隐藏跳过按钮
+            }, 2000));
+        }
+    }
+    
+    timers.push(setTimeout(playNextScene, duration));
+
+    // 点击探索按钮
+    function enterApp() {
+        if (bgm.paused) {
+            bgm.play().catch(()=>{});
+        }
+window.location.href = 'index2.html';
+    }
+</script>
+</body>
+</html>
